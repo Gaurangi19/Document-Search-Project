@@ -1,8 +1,10 @@
-import glob, os
+import glob, os, time
 import io
 import unicodedata
 import re
 import rake
+import MySQLdb
+import smtplib
 
 from cStringIO import StringIO
 from pdfminer.pdfinterp import PDFResourceManager, PDFPageInterpreter
@@ -10,13 +12,16 @@ from pdfminer.converter import TextConverter
 from pdfminer.layout import LAParams
 from pdfminer.pdfpage import PDFPage
 from googleapiclient.discovery import build
+from datetime import datetime, timedelta
+from email.MIMEMultipart import MIMEMultipart
+from email.MIMEText import MIMEText
 
 #set Google API key and Custom Search Engine ID
-my_api_key = "Your API key"
-my_cse_id = "Your CSE ID"
+my_api_key = "AIzaSyBW0y5YMJK0Qp747SK0my0j6UBteHJs4pg"
+my_cse_id = "015024250935202605826:b-3_c-ezr0a"
 
 #initialize the stopwords list
-stoppath = "SmartStoplist.txt"
+stoppath = "C:\Python27\RAKE-tutorial-master\SmartStoplist.txt"
 
 #set directory for the files
 my_directory = "C:\USC stuff\MOSIS\Test_Files"
@@ -100,18 +105,168 @@ def google_search(search_term, api_key, cse_id):
     else:
         return res['items']
 
+#module to send email when no document is found on the Internet
+def send_email_not_found():
+    fromaddr = "mosis.doc.search@gmail.com"
+    toaddr = ["neelusin@usc.edu", "gaurangr@usc.edu"]
+    msg = MIMEMultipart()
+    msg['From'] = fromaddr
+    msg['To'] = ", ".join(toaddr)
+    msg['Subject'] = "Document Search - No Documents Found"
+    body = "We searched the Internet and did not find any documents today."
+    msg.attach(MIMEText(body, 'plain'))
+    server = smtplib.SMTP('smtp.gmail.com', 587)
+    server.starttls()
+    server.login(fromaddr, "MarinaTowers")
+    text = msg.as_string()
+    server.sendmail(fromaddr, toaddr, text)
+    server.quit()
+
+#module to send email when no document is found on the Internet
+def send_email_found(body_text):
+    fromaddr = "mosis.doc.search@gmail.com"
+    toaddr = ["neelusin@usc.edu", "gaurangr@usc.edu"]
+    msg = MIMEMultipart()
+    msg['From'] = fromaddr
+    msg['To'] = ", ".join(toaddr)
+    msg['Subject'] = "Document Search - Documents Found on Google"
+    body = "We searched the Internet and found the following results:- \n\n"
+    body += body_text
+    msg.attach(MIMEText(body, 'plain'))
+    server = smtplib.SMTP('smtp.gmail.com', 587)
+    server.starttls()
+    server.login(fromaddr, "MarinaTowers")
+    text = msg.as_string()
+    server.sendmail(fromaddr, toaddr, text)
+    server.quit()
+
+#module to get last modified date for a file from database
+def execute_select_file(filename):
+    sql = "SELECT * FROM FILES1 \
+       WHERE filename = '%s'" % (infile)
+    try:
+       # Execute the SQL command
+       cursor.execute(sql)
+       if not cursor.rowcount:
+           print "No results found"
+           return "", ""
+       else:
+           for row in cursor:
+               print row[1], row[2]
+               last_mod_time = row[1]
+               keywords = row[2]
+               return last_mod_time, keywords
+    except:
+        print "Error: unable to fetch data"
+
+#module to insert file details in Files table
+def execute_insert_file(infile, file_mod_time, keyword_string):
+    print "insert files mysql"
+    sql = "INSERT INTO Files1(filename, \
+       last_modified, keywords) \
+       VALUES ('%s', '%s', '%s' )" % \
+       (infile, file_mod_time, keyword_string )
+    try:
+       # Execute the SQL command
+       cursor.execute(sql)
+       # Commit your changes in the database
+       db.commit()
+    except:
+       # Rollback in case there is any error
+       db.rollback()
+
+#module to insert file details in Files table
+def execute_update_file(infile, file_mod_time, keyword_string):
+    print "update files mysql"
+    sql = "UPDATE Files1 SET last_modified = '%s', \
+            keywords = '%s' WHERE filename = '%s'" % \
+            (file_mod_time, keyword_string, infile)
+    try:
+       # Execute the SQL command
+       cursor.execute(sql)
+       # Commit your changes in the database
+       db.commit()
+    except:
+       # Rollback in case there is any error
+       db.rollback()
+
+#module to get last modified date for a file from database
+def execute_select_filesearch(filename, result_link):
+    sql = "SELECT search_status FROM FileSearch1 \
+       WHERE filename = '%s' and search_result = '%s'" % (filename, result_link)
+    try:
+       # Execute the SQL command
+       cursor.execute(sql)
+       if not cursor.rowcount:
+           print "No results found"
+           return ""
+       else:
+           for row in cursor:
+               print row[0]
+               search_status = row[0]
+               return search_status
+    except:
+        print "Error: unable to fetch data"
+
+#module to insert search details in FileSearch table
+def execute_insert_filesearch(infile, result):
+    print "insert filesearch mysql"
+    sql = "INSERT INTO FileSearch1(filename, \
+       search_result, search_status) \
+       VALUES ('%s', '%s', '%s' )" % \
+       (infile, result, 'wait' )
+    try:
+       # Execute the SQL command
+       cursor.execute(sql)
+       # Commit your changes in the database
+       db.commit()
+    except:
+       # Rollback in case there is any error
+       db.rollback()
+    
+# Open database connection
+db = MySQLdb.connect("localhost","root","raul","TESTDB" )
+
+# prepare a cursor object using cursor() method
+cursor = db.cursor()
+
+body_text = ""
 for infile in glob.glob("*.pdf"):
     print "Filename: ", infile
-    keyword_string = preprocess(infile)
-    print "Keywords: ", keyword_string
-    results = google_search(keyword_string, my_api_key, my_cse_id)
-    if results == "":
-        print "No results"
+    db_last_mod_time, keyword_string = execute_select_file(infile)
+    print "DB time: %s" % db_last_mod_time
+    file_mod_time = datetime.fromtimestamp(os.stat(infile).st_mtime)
+    file_mod_time = file_mod_time.replace(microsecond=0)
+    print "Last modified: %s" % file_mod_time
+    if db_last_mod_time == "":
+        keyword_string = preprocess(infile)
+        print "Keywords: ", keyword_string
+        execute_insert_file(infile, file_mod_time, keyword_string)
     else:
-        print "Search Results:"
+        if file_mod_time > db_last_mod_time:
+            keyword_string = preprocess(infile)
+            print "Keywords: ", keyword_string
+            execute_update_file(infile, file_mod_time, keyword_string)
+        
+    results = google_search(keyword_string, my_api_key, my_cse_id)
+    if results != "":
         for result in results:
-            print(result['link'])
+            db_search_status = execute_select_filesearch(infile, result['link'])
+            if db_search_status == "":
+                execute_insert_filesearch(infile, result['link'])
+                body_text = "Document Name: %s\nSearch result: %s\n" %(infile,result['link'])
+            elif db_search_status == "wait" or "resolved":
+                body_text = "Document Name: %s\nSearch result: %s\n" %(infile,result['link'])
     print "-------------------------------------------------------------"
 
+# disconnect from server
+db.close()
 
-    
+# send email if any document is found on google search
+if body_text == "":
+    send_email_not_found()
+    print "No Documents found today!"
+else:
+    send_email_found(body_text)
+    print "Found following results:-"
+    print body_text
