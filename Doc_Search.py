@@ -17,8 +17,8 @@ from email.MIMEMultipart import MIMEMultipart
 from email.MIMEText import MIMEText
 
 #set Google API key and Custom Search Engine ID
-my_api_key = "AIzaSyBW0y5YMJK0Qp747SK0my0j6UBteHJs4pg"
-my_cse_id = "015024250935202605826:b-3_c-ezr0a"
+my_api_key = "your api key"
+my_cse_id = "your cse id"
 
 #initialize the stopwords list
 stoppath = "C:\Python27\RAKE-tutorial-master\SmartStoplist.txt"
@@ -225,7 +225,7 @@ def execute_insert_filesearch(infile, result):
        db.rollback()
     
 # Open database connection
-db = MySQLdb.connect("localhost","root","raul","TESTDB" )
+db = MySQLdb.connect("localhost","root","password","DBname" )
 
 # prepare a cursor object using cursor() method
 cursor = db.cursor()
