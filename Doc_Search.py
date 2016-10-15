@@ -108,7 +108,7 @@ def google_search(search_term, api_key, cse_id):
 #module to send email when no document is found on the Internet
 def send_email_not_found():
     fromaddr = "mosis.doc.search@gmail.com"
-    toaddr = ["neelusin@usc.edu", "gaurangr@usc.edu"]
+    toaddr = ["to-email-address"]
     msg = MIMEMultipart()
     msg['From'] = fromaddr
     msg['To'] = ", ".join(toaddr)
@@ -125,7 +125,7 @@ def send_email_not_found():
 #module to send email when no document is found on the Internet
 def send_email_found(body_text):
     fromaddr = "mosis.doc.search@gmail.com"
-    toaddr = ["neelusin@usc.edu", "gaurangr@usc.edu"]
+    toaddr = ["to-email-address"]
     msg = MIMEMultipart()
     msg['From'] = fromaddr
     msg['To'] = ", ".join(toaddr)
