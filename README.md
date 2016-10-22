@@ -14,10 +14,10 @@ https://support.google.com/customsearch/answer/2631040
 3) Install Google API client for Python  
 pip install google-api-python-client
 
-4) Install PDFMiner to convert pdf files to text
+4) Install PDFMiner to convert pdf files to text  
 http://www.unixuser.org/~euske/python/pdfminer/ 
 
-5) Install MySQL connector for python 
+5) Install MySQL connector for python   
 http://dev.mysql.com/downloads/connector/python/2.0.html
 
 
