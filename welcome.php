@@ -26,13 +26,9 @@
 <script>
 	function Inc(id,fi,mi){
 			var xmlhttp = new XMLHttpRequest();
-			console.log(id);
-			console.log(fi);
-			console.log(mi);
 			xmlhttp.onreadystatechange = function() {
 				if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
 					var htmldata = xmlhttp.responseText;
-					console.log(htmldata);
 					htmldata = htmldata.replace(/\\/gi , "");
 					var stringIndex = htmldata.substring(htmldata.lastIndexOf("start") +5 ,htmldata.lastIndexOf("end"));
 					var divtagNumbers = stringIndex.split("Begin");
@@ -101,7 +97,6 @@ function refresh($file){
 function add($file,$link,$status) {
 	echo "in add";
 	global $mysqli;
-	console.log($link);
 	$sql2 = "UPDATE FileSearch SET search_status = '$status' where  filename ='$file' and search_result = '$link'";
 	if(mysqli_query($mysqli ,$sql2)){
 		return json_encode($sql2);
